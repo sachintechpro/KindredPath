@@ -1,34 +1,43 @@
 # KindredPath
 
-A public educational website with a simple, stateless meeting-request form.
+**Explore. Imagine. Prepare.**
 
-## Visitor journey
-1. A visitor arrives from a social-media call to action.
-2. They explore general educational content on family priorities, financial confidence, and professional growth.
-3. They submit their name, email, topic, and preferred meeting date/time.
-4. KindredPath emails the request to the coordinator and sends a receipt to the visitor.
-5. The coordinator follows up by email to confirm or propose another time.
+KindredPath is an interactive family financial-education experience designed to help people explore questions across children and education, family protection, healthcare and Medicare, aging parents, savings and retirement, home stability, and legacy.
 
-## Privacy by design
-- No database, lead dashboard, candidate account, CRM, or persistent form storage.
-- No WhatsApp integration.
-- No candidate-specific product recommendations, product comparisons, or tax analysis on the website.
-- Form details are used only to compose the two requested emails.
-- Do not ask visitors for Social Security numbers, account numbers, medical details, or sensitive financial information.
-- The hosting provider may retain routine operational logs; this application does not write form submissions to application storage.
+## Experience
+- Curiosity-driven homepage organized around life questions rather than products.
+- **Family Journey** with plain-language explanations and practical scenarios.
+- **Future Lab** with interactive sliders and illustrative what-if calculators.
+- Product/category concepts including term life, whole life, universal life, IUL, 529 plans, Medicare/Medigap, long-term care, retirement accounts, annuities, disability, critical illness, and estate concepts.
+- Email-only conversation request flow.
+- Responsive design for desktop and mobile.
+- No database or persistent form storage.
+
+## Future Lab
+Current interactive tools:
+1. Monthly savings future-value explorer.
+2. Children's education-cost explorer.
+3. Household protection/runway explorer.
+
+The calculators are deliberately simplified illustrations. They are not forecasts, quotes, financial recommendations, insurance recommendations, tax advice, legal advice, or investment advice.
+
+## Privacy
+- No application database or lead-management system.
+- No persistent visitor profile.
+- Do not request Social Security numbers, account numbers, medical details, or sensitive financial information.
+- Routine hosting logs may exist outside the application.
 
 ## Email configuration
-Configure these Render environment variables:
-- `RESEND_API_KEY`: Resend API key.
-- `FROM_EMAIL`: A sender address verified with Resend (for example, a verified address on your domain).
+Render environment variables:
+- `RESEND_API_KEY`
+- `FROM_EMAIL`
 
-The coordinator email is fixed in the application as `sachin.techpro@gmail.com`. Each valid request generates one email to the coordinator and one receipt email to the visitor.
+The coordinator email is configured in `app.py`.
 
-## Meeting scheduling
-The visitor chooses a preferred date and time in Pacific Time. This is a request, not a live calendar booking. The coordinator confirms availability by email. No calendar integration or appointment record is stored.
-
-## Deploy on Render
-Use the repository `sachintechpro/KindredPath`, branch `main`, and the root `render.yaml`. The service uses the free Docker web-service plan and requires the two email environment variables above. No database is needed.
+## Deploy
+Repository: `sachintechpro/KindredPath`
+Branch: `main`
+Render configuration: `render.yaml`
 
 ## Local run
 ```bash
