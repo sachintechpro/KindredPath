@@ -1,9 +1,3 @@
-databases:
-  - name: kindredpath-db
-    plan: free
-    region: ohio
-    postgresMajorVersion: 18
-
 services:
   - type: web
     name: kindredpath
@@ -14,15 +8,7 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: kindredpath-db
-          property: connectionString
-      - key: SECRET_KEY
-        generateValue: true
-      - key: ADMIN_USER
-        value: admin
-      - key: ADMIN_PASSWORD
+      - key: RESEND_API_KEY
         sync: false
-      - key: LEAD_EMAIL_TO
-        value: sachin.techpro@gmail.com
+      - key: FROM_EMAIL
+        sync: false
