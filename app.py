@@ -1,4 +1,4 @@
-import os, json, urllib.request, urllib.error
+import os, json, urllib.request, urllib.error, urllib.parse
 from datetime import date, datetime
 from flask import Flask, request, render_template_string
 
@@ -41,13 +41,19 @@ BASE = """
 def page(title, body, **ctx):
     return render_template_string(BASE, title=title, body=render_template_string(body, **ctx))
 
-def send_email(to_address, subject, text_body):
+def send_email(to_address, subject, text_body, reply_to=None):
     if not RESEND_API_KEY or not FROM_EMAIL:
         raise RuntimeError("Email delivery is not configured yet.")
     payload={"from":FROM_EMAIL,"to":[to_address],"subject":subject,"text":text_body}
+    if reply_to:
+        payload["reply_to"]=reply_to
     req=urllib.request.Request("https://api.resend.com/emails",data=json.dumps(payload).encode(),headers={"Authorization":"Bearer "+RESEND_API_KEY,"Content-Type":"application/json"},method="POST")
     try:
         with urllib.request.urlopen(req,timeout=15) as r:r.read()
+    except urllib.error.HTTPError as exc:
+        detail=exc.read().decode("utf-8","replace")[:500]
+        app.logger.error("Email provider rejected message (HTTP %s): %s",exc.code,detail)
+        raise RuntimeError("Email provider rejected the message.") from exc
     except Exception as exc:
         app.logger.error("Email delivery failed: %s",type(exc).__name__)
         raise RuntimeError("Email delivery failed.") from exc
@@ -170,10 +176,17 @@ def meet():
             pretty=datetime.strptime(meeting_time,"%H:%M").strftime("%I:%M %p")
             details=f"Name: {name}\nEmail: {email}\nTopic: {pathway}\nPreferred meeting: {meeting_date} at {pretty} (Pacific Time)\nNote: {note or 'None'}"
             try:
-                send_email(ADMIN_EMAIL,f"KindredPath conversation request — {name}",details)
+                send_email(ADMIN_EMAIL,f"KindredPath conversation request — {name}",details,reply_to=email)
+            except RuntimeError:
+                fallback_subject=urllib.parse.quote(f"KindredPath conversation request — {name}")
+                fallback_body=urllib.parse.quote(details)
+                fallback_url=f"mailto:{ADMIN_EMAIL}?subject={fallback_subject}&body={fallback_body}"
+                return page("Complete your request","<main class='wrap' style='max-width:760px'><div class='notice'>The website email service could not deliver your request.</div><h1 style='font-size:42px'>One quick alternative, {{name}}.</h1><p style='color:var(--muted);line-height:1.8'>Your details are ready. Open your email app and send the prepared message directly so your request reaches us.</p><a class='btn' href='{{fallback_url}}'>Open email to send request →</a><p style='color:var(--muted);font-size:13px;margin-top:18px'>Your request has not been submitted until you send that email.</p><a href='/'>Return to KindredPath</a></main>",name=name,fallback_url=fallback_url)
+            try:
                 send_email(email,"We received your KindredPath request",f"Hello {name},\n\nWe received your request to discuss {pathway}. Preferred time: {meeting_date} at {pretty} Pacific Time. This is a request, not a confirmed appointment.\n\nKindredPath")
-                return page("Request received","<main class='wrap'><div class='notice'>Request sent successfully</div><h1 style='font-size:48px'>Thank you, {{name}}.</h1><p style='color:var(--muted);line-height:1.8'>We received your request and will email you to confirm the time or suggest an alternative.</p><a class='btn' href='/'>Return to KindredPath</a></main>",name=name)
-            except RuntimeError:error="We could not send your request right now. Please try again later."
+            except RuntimeError:
+                app.logger.warning("Request email delivered to coordinator, but requester confirmation could not be sent.")
+            return page("Request received","<main class='wrap'><div class='notice'>Request sent successfully</div><h1 style='font-size:48px'>Thank you, {{name}}.</h1><p style='color:var(--muted);line-height:1.8'>We received your request and will email you to confirm the time or suggest an alternative.</p><a class='btn' href='/'>Return to KindredPath</a></main>",name=name)
     return page("Start a conversation","<main class='wrap' style='max-width:760px'><div class='eyebrow'>Connect</div><h1 style='font-size:48px'>Let's explore the question together.</h1><p style='color:var(--muted);line-height:1.8'>Choose a preferred time. This sends an email request; it does not automatically book an appointment.</p>{% if error %}<div class='notice'>{{error}}</div>{% endif %}<form class='panel' method='post'><div class='grid'><div class='field'><label>Name *</label><input name='name' required maxlength='120'></div><div class='field'><label>Email *</label><input name='email' type='email' required maxlength='254'></div><div class='field full'><label>What are you curious about?</label><select name='pathway'><option>Family & future</option><option>Children & education</option><option>Healthcare & Medicare</option><option>Retirement & savings</option><option>Aging parents</option><option>Legacy & estate</option><option>General introduction</option></select></div><div class='field'><label>Preferred date *</label><input name='meeting_date' type='date' min='{{today}}' required></div><div class='field'><label>Preferred time (Pacific) *</label><select name='meeting_time' required><option value=''>Choose</option><option value='09:00'>9:00 AM</option><option value='10:00'>10:00 AM</option><option value='11:00'>11:00 AM</option><option value='13:00'>1:00 PM</option><option value='14:00'>2:00 PM</option><option value='15:00'>3:00 PM</option><option value='16:00'>4:00 PM</option></select></div><div class='field full'><label>Anything you'd like us to know?</label><input name='note' maxlength='1200' placeholder='Please do not include sensitive personal information.'></div><div style='position:absolute;left:-5000px'><input name='website' tabindex='-1'></div><div class='field full'><button class='btn' type='submit'>Email my request →</button></div></div></form></main>",error=error,today=date.today().isoformat())
 
 @app.get("/health")
